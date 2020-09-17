@@ -1,0 +1,9 @@
+~/Downloads/*.mp4
+~/Downloads/*.mkv
+~/Downloads/*.webm
+~/Downloads/*.avi
+~/Downloads/*/*.mp4
+~/Downloads/*/*.mkv
+~/Downloads/*/*.webm
+~/Downloads/*/*.avi
+~/test.mp4

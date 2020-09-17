@@ -1,0 +1,4 @@
+#!/bin/sh
+
+#npx parcel build --public-url /static src/indexmpv.html -d ../static/ --no-content-hash
+npm run build

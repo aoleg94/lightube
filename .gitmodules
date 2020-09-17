@@ -1,0 +1,3 @@
+[submodule "mpvnew"]
+	path = mpvnew
+	url = https://github.com/jaseg/python-mpv

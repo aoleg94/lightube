@@ -1,0 +1,4 @@
+youtube-dl*
+old
+__pycache__
+node_modules

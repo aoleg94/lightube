@@ -1,0 +1,27 @@
+{
+	"name": "lightube-web",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"dev": "parcel src/index.html",
+		"build": "parcel build src/index.html"
+	},
+	"browserslist": [
+		"last 1 chrome versions",
+		"last 1 firefox versions"
+	],
+	"author": "",
+	"license": "ISC",
+	"devDependencies": {
+		"parcel-bundler": "^1.12.4",
+		"parcel-plugin-svelte": "^4.0.6",
+		"sass": "^1.25.0",
+		"svelte": "^3.25.1"
+	},
+	"dependencies": {},
+	"scripts": {
+		"serve": "cd .. && python main.py",
+		"build": "parcel build --public-url /static src/indexmpv.html -d ../static/ --no-content-hash"
+	}
+}

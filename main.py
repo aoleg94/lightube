@@ -1,0 +1,375 @@
+#!/usr/bin/env python3
+import os, os.path, sys
+import threading
+from flask import Flask, render_template, url_for, request, redirect, send_file, make_response
+
+scriptpath = os.path.dirname(os.path.abspath(__file__))
+os.environ["PATH"] = scriptpath + os.pathsep + os.environ["PATH"]
+
+if os.system('youtube-dl --version') != 0:
+	import urllib.request
+	file = 'youtube-dl.exe' if os.name == 'nt' else 'youtube-dl'
+	urllib.request.urlretrieve('http://yt-dl.org/downloads/latest/' + file, file)
+
+try:
+	import mpv
+except ImportError:
+	import mpvnew.mpv as mpv
+
+app = Flask(__name__)
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+MOVIES = []
+def scan_movies():
+	import glob
+	fn = scriptpath + os.sep + 'movies.txt'
+	if not os.access(fn, os.R_OK): return
+	L = []
+	with open(fn) as f:
+		for line in f:
+			line = line.strip()
+			if line.startswith('#') or not line: continue
+			L.append(line)
+	global MOVIES
+	MOVIES = []
+	for pat in L:
+		MOVIES += glob.iglob(os.path.expandvars(os.path.expanduser(pat)), recursive=True)
+
+MAXRES = int(os.environ.get("MAXRES", 1080))
+def ytdlfmt(height):
+	global MAXRES
+	MAXRES = int(height)
+	return ('bestvideo[height<=%(max_height)d][vcodec^=avc]' +
+		'+bestaudio/best[height<=%(max_height)d][vcodec^=avc]' +
+		'/bestvideo[height<=%(max_height)d]+bestaudio' +
+		'/best[height<=%(max_height)d]/best') % {"max_height": MAXRES}
+
+PLAYLIST = []
+PLAYLIST_FILE = None
+def sync_playlist():
+	global PLAYLIST
+	global PLAYLIST_FILE
+	if PLAYLIST_FILE is None:
+		for pf in (
+				'mpvplaylist.txt',
+				scriptpath + os.sep + 'mpvplaylist.txt',
+				os.path.expanduser('~') + os.sep + '.mpvplaylist.txt',
+			):
+			PLAYLIST_FILE = pf
+			if os.access(pf, os.R_OK):
+				with open(pf, 'rt') as f:
+					PLAYLIST = [x.strip() for x in f.readlines()]
+				break
+		print('playlist from ' + PLAYLIST_FILE)
+	else:
+		with open(PLAYLIST_FILE, 'wt') as f:
+			for x in PLAYLIST:
+				print(x, file=f)
+sync_playlist()
+
+_mp = None
+def mp():
+	global _mp
+	global PLAYLIST
+	global MAXRES
+	if _mp is None:
+		d = dict(log_handler=print, config_dir=os.path.dirname(__file__),
+			input_default_bindings=True, input_vo_keyboard=True, osc=True, config=True, load_scripts=False,
+			keep_open=True, fullscreen=True, idle=True, hwdec="auto", #msg_level="all=v",
+			script_opts="ytdl_hook-try_ytdl_first=yes", #loglevel='debug',
+			)
+		for cookiefile in (
+				'ytcookie.txt',
+				os.path.expanduser('~') + os.sep + '.ytcookie.txt',
+				scriptpath + os.sep + 'ytcookie.txt',):
+			if os.access(cookiefile, os.R_OK):
+				d['ytdl_raw_options'] = "mark-watched=,cookies=" + cookiefile
+				print('cookies from ' + cookiefile)
+		_mp = mpv.MPV(**d)
+		_mp.event_callback('shutdown')(reinit)
+		_mp.volume = 50
+		_mp['ytdl-format'] = ytdlfmt(MAXRES)
+		_mp['pause'] = True
+		for x in PLAYLIST:
+			_mp.playlist_append(x)
+	return _mp
+
+def kill_mp():
+	global _mp
+	if _mp is not None:
+		try:
+			_mp.quit()
+			_mp.wait_for_shutdown()
+		except mpv.ShutdownError:
+			pass
+		threading.Thread(target=_mp.terminate).start()
+		_mp = None
+
+@app.route('/api/reinit', methods=['POST'])
+def reinit(*args):
+	kill_mp()
+	return ''
+
+def mpwrap(f):
+	def x(*args, **kwargs):
+		try:
+			return f(mp(), *args, **kwargs)
+		except (BrokenPipeError, SystemError):
+			kill_mp()
+		return f(mp(), *args, **kwargs)
+	x.__name__ = f.__name__
+	return x
+
+@app.route('/api/load/<path:url>', methods=['POST'])
+@mpwrap
+def load(mp, url):
+	mp.loadfile(url, 'append-play')
+	sync_playlist()
+	return ''
+
+@app.route('/api/add/<path:url>', methods=['POST'])
+@mpwrap
+def add(mp, url):
+	mp.playlist_append(url)
+	sync_playlist()
+	return ''
+
+@app.route('/api/maxres/<v>', methods=['POST'])
+@mpwrap
+def maxres(mp, v):
+	mp['ytdl-format'] = ytdlfmt(int(v))
+	return ''
+
+@app.route('/api/play', methods=['POST'])
+@mpwrap
+def play(mp):
+	mp.pause = False
+	return ''
+
+@app.route('/api/pause', methods=['POST'])
+@mpwrap
+def pause(mp):
+	mp.pause = True
+	return ''
+
+@app.route('/api/vol/abs/<v>', methods=['POST'])
+@mpwrap
+def vol(mp, v):
+	mp.volume = int(v)
+	return ''
+
+@app.route('/api/vol/rel/<v>', methods=['POST'])
+@mpwrap
+def volr(mp, v):
+	mp.volume += int(v)
+	return ''
+
+@app.route('/api/speed/abs/<v>', methods=['POST'])
+@mpwrap
+def speed(mp, v):
+	mp.speed = float(v)
+	return ''
+
+@app.route('/api/speed/rel/<v>', methods=['POST'])
+@mpwrap
+def speedr(mp, v):
+	mp.speed += float(v)
+	return ''
+
+@app.route('/api/speed/up', methods=['POST'])
+@mpwrap
+def speedu(mp):
+	mp.speed *= 1.1
+	return ''
+
+@app.route('/api/speed/down', methods=['POST'])
+@mpwrap
+def speedd(mp):
+	mp.speed /= 1.1
+	return ''
+
+@app.route('/api/seek/rel/<v>', methods=['POST'])
+@mpwrap
+def sere(mp, v):
+	mp.seek(float(v), 'relative')
+	return ''
+
+@app.route('/api/seek/abs/<v>', methods=['POST'])
+@mpwrap
+def seab(mp, v):
+	mp.seek(float(v), 'absolute')
+	return ''
+
+@app.route('/api/mute', methods=['POST'])
+@mpwrap
+def mute(mp):
+	mp.cycle('mute')
+	return ''
+
+@app.route('/api/fullscreen/<v>', methods=['POST'])
+@mpwrap
+def setfs(mp, v):
+	mp.fullscreen = bool(int(v))
+	return ''
+
+@app.route('/api/cycle/<v>', methods=['POST'])
+@mpwrap
+def cycle(mp, v):
+	mp.cycle(v)
+	return ''
+
+@app.route('/api/setprop/<p>/<v>', methods=['POST'])
+@mpwrap
+def setprop(mp, p, v):
+	import json
+	setattr(mp, p, json.loads(v))
+	return ''
+
+@app.route('/api/next', methods=['POST'])
+@mpwrap
+def pnext(mp):
+	mp.playlist_next()
+	return ''
+
+@app.route('/api/prev', methods=['POST'])
+@mpwrap
+def pprev(mp):
+	mp.playlist_prev()
+	return ''
+
+@app.route('/api/clear', methods=['POST'])
+@mpwrap
+def pclear(mp):
+	mp.playlist_clear()
+	global PLAYLIST
+	PLAYLIST[:] = []
+	sync_playlist()
+	return ''
+
+@app.route('/api/move/<a>/<b>', methods=['POST'])
+@mpwrap
+def pmove(mp, a, b):
+	if int(b) < 0: return ''
+	mp.playlist_move(int(a), int(b))
+	return ''
+
+@app.route('/api/remove/<a>', methods=['POST'])
+@mpwrap
+def premove(mp, a):
+	mp.playlist_remove(int(a))
+	sync_playlist()
+	return ''
+
+@app.route('/api/scan', methods=['POST'])
+@mpwrap
+def scan(mp):
+	scan_movies()
+	return ''
+
+@app.route('/api/status')
+@mpwrap
+def mpstatus(mp):
+	global MAXRES
+	return {
+		'position': mp.time_pos,
+		'duration': mp.duration,
+		'volume': mp.volume,
+		'mute': mp.mute,
+		'playing': not mp.pause,
+		'playlist_pos': mp.playlist_pos,
+		'speed': mp.speed,
+		'downloads': dl_status(),
+		'quality': MAXRES
+	}
+
+def dl_status():
+	return {'progress': None, 'items': []}
+
+import threading
+import queue
+if False:
+	_DL_QUEUE = queue.Queue()
+	_DL_STATUS = None
+	def dl_status():
+		global _DL_STATUS
+		return {'progress': _DL_STATUS, 'items': list(_DL_QUEUE.queue)}
+	def dl_thread():
+		global _DL_QUEUE
+		while True:
+			url, fmt = _DL_QUEUE.get()
+			with os.popen('youtube-dl -o "%s/Downloads/%%(title)s.%%(ext)s" --restrict-filenames "%s"' % (scriptpath, url, fmt)) as f:
+				pass
+			_DL_QUEUE.task_done()
+	#tt = threading.Thread(target=title_thread)
+	#tt.setDaemon(1)
+	#tt.start()
+
+	@app.route('/api/download/<fmt>/<path:url>', methods=['POST'])
+	def download(fmt, url):
+		global _DL_QUEUE
+		_DL_QUEUE.put(url, fmt)
+		return ''
+
+title = None
+if True:
+	_TITLE_CACHE = {}
+	_TITLE_QUEUE = queue.Queue()
+	def title(x):
+		if x.get('title'): return
+		f = x.get('filename')
+		if not f: return
+		if not f.startswith('http'): return
+		if f not in _TITLE_CACHE:
+			_TITLE_CACHE[f] = True
+			_TITLE_QUEUE.put(f)
+		else:
+			t = _TITLE_CACHE[f]
+			if t in (True, False): return
+			x['title'] = t
+	def title_thread():
+		while True:
+			k = _TITLE_QUEUE.get()
+			try:
+				with os.popen('youtube-dl -e "%s"' % k) as f:
+					_TITLE_CACHE[k] = f.readline().strip() or None
+			except Exception:
+				_TITLE_CACHE[k] = False
+			_TITLE_QUEUE.task_done()
+	tt = threading.Thread(target=title_thread)
+	tt.setDaemon(1)
+	tt.start()
+
+@app.route('/api/status2')
+@mpwrap
+def mpstatus2(mp):
+	pl = mp.playlist
+	global MAXRES
+	global PLAYLIST
+	PLAYLIST = [x.get('filename') for x in pl]
+	sync_playlist()
+	for x in pl:
+		title(x)
+	return {
+		'position': mp.time_pos,
+		'duration': mp.duration,
+		'volume': mp.volume,
+		'title': mp.media_title,
+		'mute': mp.mute,
+		'playing': not mp.pause,
+		'playlist_pos': mp.playlist_pos,
+		'video': mp.path,
+		'playlist': pl,
+		'audio_tracks': [x for x in mp.track_list if x.get('type') == 'audio'],
+		'sub_tracks': [x for x in mp.track_list if x.get('type') == 'sub'],
+		'movies': [{'name': os.path.basename(x), 'full': os.path.abspath(x)} for x in MOVIES],
+		'speed': mp.speed,
+		'downloads': dl_status(),
+		'quality': MAXRES
+	}
+
+@app.route('/')
+def index():
+	return redirect('/static/indexmpv.html')
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0')
