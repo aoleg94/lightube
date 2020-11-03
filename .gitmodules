@@ -1,3 +1,6 @@
 [submodule "mpvnew"]
 	path = mpvnew
 	url = https://github.com/jaseg/python-mpv
+[submodule "youtube_dl"]
+	path = youtube_dl_repo
+	url = https://gitlab.com/dstftw/youtube-dl

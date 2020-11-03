@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
 import os, os.path, sys
 import threading
-from flask import Flask, render_template, url_for, request, redirect, send_file, make_response
+from flask import Flask, render_template, url_for, request, redirect, send_file
 
 scriptpath = os.path.dirname(os.path.abspath(__file__))
-os.environ["PATH"] = scriptpath + os.pathsep + os.environ["PATH"]
-
-if os.system('youtube-dl --version') != 0:
-	import urllib.request
-	file = 'youtube-dl.exe' if os.name == 'nt' else 'youtube-dl'
-	urllib.request.urlretrieve('http://yt-dl.org/downloads/latest/' + file, file)
 
 try:
 	import mpv
@@ -67,6 +61,9 @@ def sync_playlist():
 				print(x, file=f)
 sync_playlist()
 
+def ytdl_query(url):
+	pass
+
 _mp = None
 def mp():
 	global _mp
@@ -92,6 +89,7 @@ def mp():
 		_mp['pause'] = True
 		for x in PLAYLIST:
 			_mp.playlist_append(x)
+			ytdl_query(x)
 	return _mp
 
 def kill_mp():
@@ -125,6 +123,7 @@ def mpwrap(f):
 def load(mp, url):
 	mp.loadfile(url, 'append-play')
 	sync_playlist()
+	ytdl_query(url)
 	return ''
 
 @app.route('/api/add/<path:url>', methods=['POST'])
@@ -132,6 +131,7 @@ def load(mp, url):
 def add(mp, url):
 	mp.playlist_append(url)
 	sync_playlist()
+	ytdl_query(url)
 	return ''
 
 @app.route('/api/maxres/<v>', methods=['POST'])
@@ -330,8 +330,9 @@ if True:
 		while True:
 			k = _TITLE_QUEUE.get()
 			try:
-				with os.popen('youtube-dl -e "%s"' % k) as f:
-					_TITLE_CACHE[k] = f.readline().strip() or None
+				with os.popen('youtube-dl --no-warnings --flat-playlist --no-playlist -J "%s"' % k) as f:
+					o = json.load(f)
+					_TITLE_CACHE[k] = o.get('title')
 			except Exception:
 				_TITLE_CACHE[k] = False
 			_TITLE_QUEUE.task_done()
@@ -349,6 +350,10 @@ def mpstatus2(mp):
 	sync_playlist()
 	for x in pl:
 		title(x)
+	p = mp.time_pos
+	d = mp.duration
+	if mp.playlist_pos is not None and mp.playlist_pos+1 < len(PLAYLIST) and p is not None and d is not None and d-p < 120:
+		ytdl_query(PLAYLIST[mp.playlist_pos+1]) # fetch in background
 	return {
 		'position': mp.time_pos,
 		'duration': mp.duration,
@@ -370,6 +375,56 @@ def mpstatus2(mp):
 @app.route('/')
 def index():
 	return redirect('/static/indexmpv.html')
+
+try:
+	import youtube_dl, time, json
+	_YTDL_OBJ = youtube_dl.YoutubeDL(dict(simulate=True, no_warnings=True, extract_flat='in_playlist',
+		sub_format='ass/srt/best', allsubtitles=True, noplaylist=True, quiet=True, format=ytdlfmt(MAXRES)))
+	_YTDL_CACHE = {}
+	_YTDL_QUEUE = queue.Queue()
+	_YTDL_CACHE_OK_TIMEOUT = 60 * 60
+	_YTDL_CACHE_ERR_TIMEOUT = 10
+	def ytdl_thread():
+		while True:
+			k = _YTDL_QUEUE.get()
+			try:
+				_YTDL_OBJ.params['format'] = ytdlfmt(MAXRES)
+				res = _YTDL_OBJ.extract_info(k)
+				_YTDL_CACHE[k] = (type(res) != str, res, time.time())
+			except Exception as e:
+				import traceback
+				_YTDL_CACHE[k] = (False, traceback.format_exc(), time.time())
+			_YTDL_QUEUE.task_done()
+	ytt = threading.Thread(target=ytdl_thread)
+	ytt.setDaemon(1)
+	ytt.start()
+	@app.route('/api/ytdl/<path:url>', methods=['POST'])
+	def ytdl_query(url):
+		if not url.startswith('http'): return '', 400
+		if url not in _YTDL_CACHE:
+			_YTDL_CACHE[url] = (None, None, None)
+			_YTDL_QUEUE.put(url)
+			return '', 201
+		else:
+			ok, data, when = _YTDL_CACHE[url]
+			if ok is None: return '', 202
+			ago = time.time() - when
+			if ago > (_YTDL_CACHE_OK_TIMEOUT if ok else _YTDL_CACHE_ERR_TIMEOUT):
+				_YTDL_CACHE[url] = (None, None, None)
+				_YTDL_QUEUE.put(url)
+				return '', 201
+			return data, 200 if ok else 500
+
+except ImportError:
+	os.environ["PATH"] = scriptpath + os.pathsep + os.environ["PATH"]
+	if os.system('youtube-dl --version') != 0:
+		import urllib.request
+		ytdlexe = 'youtube-dl.exe' if os.name == 'nt' else 'youtube-dl'
+		urllib.request.urlretrieve('http://yt-dl.org/downloads/latest/' + ytdlexe, ytdlexe)
+else:
+	os.environ["PATH"] = scriptpath + os.sep + 'ytdlwrap' + os.pathsep + os.environ["PATH"]
+	if os.name == 'posix':
+		os.chmod(os.path.join(scriptpath, 'ytdlwrap', 'youtube-dl'), 0o755)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')
