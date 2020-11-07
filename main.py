@@ -156,36 +156,42 @@ def pause(mp):
 @mpwrap
 def vol(mp, v):
 	mp.volume = int(v)
+	mp.show_text('Volume: %d%%' % mp.volume, 1000)
 	return ''
 
 @app.route('/api/vol/rel/<v>', methods=['POST'])
 @mpwrap
 def volr(mp, v):
 	mp.volume += int(v)
+	mp.show_text('Volume: %d%%' % mp.volume, 1000)
 	return ''
 
 @app.route('/api/speed/abs/<v>', methods=['POST'])
 @mpwrap
 def speed(mp, v):
 	mp.speed = float(v)
+	mp.show_text('Speed: %.2f' % mp.speed, 1000)
 	return ''
 
 @app.route('/api/speed/rel/<v>', methods=['POST'])
 @mpwrap
 def speedr(mp, v):
 	mp.speed += float(v)
+	mp.show_text('Speed: %.2f' % mp.speed, 1000)
 	return ''
 
 @app.route('/api/speed/up', methods=['POST'])
 @mpwrap
 def speedu(mp):
 	mp.speed *= 1.1
+	mp.show_text('Speed: %.2f' % mp.speed, 1000)
 	return ''
 
 @app.route('/api/speed/down', methods=['POST'])
 @mpwrap
 def speedd(mp):
 	mp.speed /= 1.1
+	mp.show_text('Speed: %.2f' % mp.speed, 1000)
 	return ''
 
 @app.route('/api/seek/rel/<v>', methods=['POST'])
@@ -204,6 +210,7 @@ def seab(mp, v):
 @mpwrap
 def mute(mp):
 	mp.cycle('mute')
+	mp.show_text('Mute: %s' % 'yes' if mp.mute else 'no', 1000)
 	return ''
 
 @app.route('/api/fullscreen/<v>', methods=['POST'])
