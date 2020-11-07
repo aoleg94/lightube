@@ -2,3 +2,5 @@ youtube-dl*
 old
 __pycache__
 node_modules
+test.mp4
+lightube*.zip
