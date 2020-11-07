@@ -2,6 +2,7 @@
 import os, os.path, sys
 import threading
 from flask import Flask, render_template, url_for, request, redirect, send_file
+from urllib.request import urlopen
 
 scriptpath = os.path.dirname(os.path.abspath(__file__))
 
@@ -64,6 +65,9 @@ sync_playlist()
 def ytdl_query(url):
 	pass
 
+def ytdl_prefetch(url):
+	pass
+
 _mp = None
 def mp():
 	global _mp
@@ -87,9 +91,10 @@ def mp():
 		_mp.volume = 50
 		_mp['ytdl-format'] = ytdlfmt(MAXRES)
 		_mp['pause'] = True
+		_mp.command('load_script', 'sponsorblock_minimal.lua')
 		for x in PLAYLIST:
 			_mp.playlist_append(x)
-			ytdl_query(x)
+			ytdl_prefetch(x)
 	return _mp
 
 def kill_mp():
@@ -123,7 +128,7 @@ def mpwrap(f):
 def load(mp, url):
 	mp.loadfile(url, 'append-play')
 	sync_playlist()
-	ytdl_query(url)
+	ytdl_prefetch(url)
 	return ''
 
 @app.route('/api/add/<path:url>', methods=['POST'])
@@ -131,7 +136,7 @@ def load(mp, url):
 def add(mp, url):
 	mp.playlist_append(url)
 	sync_playlist()
-	ytdl_query(url)
+	ytdl_prefetch(url)
 	return ''
 
 @app.route('/api/maxres/<v>', methods=['POST'])
@@ -360,7 +365,7 @@ def mpstatus2(mp):
 	p = mp.time_pos
 	d = mp.duration
 	if mp.playlist_pos is not None and mp.playlist_pos+1 < len(PLAYLIST) and p is not None and d is not None and d-p < 120:
-		ytdl_query(PLAYLIST[mp.playlist_pos+1]) # fetch in background
+		ytdl_prefetch(PLAYLIST[mp.playlist_pos+1]) # fetch in background
 	return {
 		'position': mp.time_pos,
 		'duration': mp.duration,
@@ -391,14 +396,20 @@ try:
 	_YTDL_QUEUE = queue.Queue()
 	_YTDL_CACHE_OK_TIMEOUT = 60 * 60
 	_YTDL_CACHE_ERR_TIMEOUT = 10
+	_YTDL_SPONSORBLOCK_API = 'https://sponsor.ajay.app/api/skipSegments?categories=["sponsor","intro","outro","interaction","selfpromo"]&videoID='
 	def ytdl_thread():
 		while True:
 			k = _YTDL_QUEUE.get()
 			try:
-				_YTDL_OBJ.params['format'] = ytdlfmt(MAXRES)
-				res = _YTDL_OBJ.extract_info(k)
-				_YTDL_CACHE[k] = (type(res) != str, res, time.time())
-			except Exception as e:
+				if k.startswith('https://sponsor.ajay.app/api/'):
+					with urlopen(k) as f:
+						res = f.read()
+						_YTDL_CACHE[k] = (True, res, time.time())
+				else:
+					_YTDL_OBJ.params['format'] = ytdlfmt(MAXRES)
+					res = _YTDL_OBJ.extract_info(k)
+					_YTDL_CACHE[k] = (type(res) != str, res, time.time())
+			except Exception:
 				import traceback
 				_YTDL_CACHE[k] = (False, traceback.format_exc(), time.time())
 			_YTDL_QUEUE.task_done()
@@ -409,6 +420,7 @@ try:
 	def ytdl_query(url):
 		if not url.startswith('http'): return '', 400
 		if url not in _YTDL_CACHE:
+			print('query ' + url)
 			_YTDL_CACHE[url] = (None, None, None)
 			_YTDL_QUEUE.put(url)
 			return '', 201
@@ -421,6 +433,19 @@ try:
 				_YTDL_QUEUE.put(url)
 				return '', 201
 			return data, 200 if ok else 500
+	import re
+	_YTDL_ID_RE = re.compile(
+	r'https?://youtu\.be/([-_\w]+).*|' +
+	r'https?://w?w?w?\.?youtube%.[a-zA-Z]{2,3}/v/([-_\w]+).*|' +
+	r'https?://w?w?w?\.?youtube%.[a-zA-Z]{2,3}/watch.*[?&]v=([-_\w]+).*|' +
+	r'https?://w?w?w?\.?youtube%.[a-zA-Z]{2,3}/embed/([-_\w]+).*')
+	def ytdl_prefetch(url):
+		ytdl_query(url)
+		m = _YTDL_ID_RE.match(url)
+		if m:
+			url = _YTDL_SPONSORBLOCK_API + m.group(1)
+			ytdl_query(url)
+
 
 except ImportError:
 	os.environ["PATH"] = scriptpath + os.pathsep + os.environ["PATH"]
