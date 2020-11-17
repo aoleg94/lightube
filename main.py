@@ -388,8 +388,54 @@ def mpstatus2(mp):
 def index():
 	return redirect('/static/indexmpv.html')
 
+def update(url, fname):
+	def retrcb(got_blocks, block_size, total_bytes):
+		got_bytes = got_blocks * block_size
+		if total_bytes > 0:
+			if got_bytes > total_bytes:
+				got_bytes = total_bytes
+			print(" Downloading %.2f%%... (%d kb / %d kb)" % (got_bytes * 100.0 / total_bytes, got_bytes // 1024, total_bytes // 1024), end='\r')
+		else:
+			print(" Downloading... (%d kb)" % (got_bytes // 1024), end='\r')
+
+	import urllib.request, urllib.error, time
+	req = urllib.request.Request(url)
+	if os.access(fname, os.R_OK):
+		timestamp = os.path.getmtime(fname)
+		timestr = time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime(timestamp))
+		req.add_header("If-Modified-Since", timestr)
+	try:
+		with urllib.request.urlopen(req) as fp:
+			headers = fp.info()
+			print("Downloading '%s' -> '%s'" % (url, fname))
+			with open(fname, 'wb') as tfp:
+				bs = 1024*8
+				size = -1
+				read = 0
+				blocknum = 0
+				if "content-length" in headers:
+					size = int(headers["Content-Length"])
+				retrcb(blocknum, bs, size)
+				while True:
+					block = fp.read(bs)
+					if not block:
+						break
+					read += len(block)
+					tfp.write(block)
+					blocknum += 1
+					retrcb(blocknum, bs, size)
+	except urllib.error.HTTPError as e:
+		if e.code == 304:
+			print("File '%s' is up to date" % fname)
+			return
+		raise
+	print()
+
 try:
+	update('http://yt-dl.org/downloads/latest/youtube-dl', 'youtube_dl.zip')
+	sys.path.append('youtube_dl.zip')
 	import youtube_dl, time, json
+	print('Youtube-DL library on')
 	_YTDL_OBJ = youtube_dl.YoutubeDL(dict(simulate=True, no_warnings=True, extract_flat='in_playlist',
 		sub_format='ass/srt/best', allsubtitles=True, noplaylist=True, quiet=True, format=ytdlfmt(MAXRES)))
 	_YTDL_CACHE = {}
@@ -445,14 +491,12 @@ try:
 		if m:
 			url = _YTDL_SPONSORBLOCK_API + m.group(1)
 			ytdl_query(url)
-
-
 except ImportError:
+	print('Youtube-DL library failed to load, using fallback method')
 	os.environ["PATH"] = scriptpath + os.pathsep + os.environ["PATH"]
 	if os.system('youtube-dl --version') != 0:
-		import urllib.request
 		ytdlexe = 'youtube-dl.exe' if os.name == 'nt' else 'youtube-dl'
-		urllib.request.urlretrieve('http://yt-dl.org/downloads/latest/' + ytdlexe, ytdlexe)
+		update('http://yt-dl.org/downloads/latest/' + ytdlexe, ytdlexe)
 else:
 	os.environ["PATH"] = scriptpath + os.sep + 'ytdlwrap' + os.pathsep + os.environ["PATH"]
 	if os.name == 'posix':
