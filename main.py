@@ -437,7 +437,8 @@ try:
 	import youtube_dl, time, json
 	print('Youtube-DL library on')
 	_YTDL_OBJ = youtube_dl.YoutubeDL(dict(simulate=True, no_warnings=True, extract_flat='in_playlist',
-		sub_format='ass/srt/best', allsubtitles=True, noplaylist=True, quiet=True, format=ytdlfmt(MAXRES)))
+		sub_format='ass/srt/best', subtitleslangs='en,ru,eng,rus'.split(','), writesubtitles=True, writeautomaticsub=True,
+		noplaylist=True, quiet=True, format=ytdlfmt(MAXRES)))
 	_YTDL_CACHE = {}
 	_YTDL_QUEUE = queue.Queue()
 	_YTDL_CACHE_OK_TIMEOUT = 60 * 60
