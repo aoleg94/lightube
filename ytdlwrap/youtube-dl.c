@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
 
 #ifdef _WIN32
 # include <winsock2.h>
@@ -41,6 +42,7 @@ void urlencode(char* enc, const char* url)
 	*d = 0;
 }
 
+static char buf[8 * 1024 * 1024];
 int main(int argc, char** argv)
 {
 	const char* url = 0;
@@ -50,6 +52,15 @@ int main(int argc, char** argv)
 		{
 			url = argv[i];
 			break;
+		}
+		if(memcmp(argv[i], "--version", 9) == 0)
+		{
+			struct tm *tmp;
+			time_t t = time(NULL);
+			tmp = localtime(&t);
+			strftime(buf, sizeof buf, "%Y.%m.%d", tmp);
+			puts(buf);
+			return 0;
 		}
 	}
 	if(!url)
@@ -83,7 +94,6 @@ retry:;
 		return 4;
 	}
 
-	char buf[128 * 1024];
 	int sz = sprintf(buf, "POST /api/ytdl/%s HTTP/1.0\r\nConnection: close\r\n\r\n", enc);
 	if(send(sock, buf, sz, 0) != sz)
 	{

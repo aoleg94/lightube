@@ -25,6 +25,12 @@ do
 	shift
 done
 
+if [ "$1" = "--version" ]
+then
+	date +%Y.%m.%d # spoof
+	exit 0
+fi
+
 shift
 
 URL="$(uriencode "$1")"
