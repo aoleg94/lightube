@@ -135,6 +135,8 @@ def load(mp, url):
 @mpwrap
 def add(mp, url):
 	mp.playlist_append(url)
+	if mp.playlist:
+		mp.playlist_move(len(mp.playlist)-1, 0)
 	sync_playlist()
 	ytdl_prefetch(url)
 	return ''
