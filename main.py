@@ -230,12 +230,24 @@ def cycle(mp, v):
 	mp.cycle(v)
 	return ''
 
+@app.route('/api/cyclev/<v>/<o>', methods=['POST'])
+@mpwrap
+def cyclev(mp, v, o):
+	mp.command('cycle-values', v, *o.split(' '))
+	return ''
+
 @app.route('/api/setprop/<p>/<v>', methods=['POST'])
 @mpwrap
 def setprop(mp, p, v):
 	import json
 	setattr(mp, p, json.loads(v))
 	return ''
+
+@app.route('/api/getprop/<p>', methods=['GET', 'POST'])
+@mpwrap
+def getprop(mp, p):
+	import json
+	return json.dumps(getattr(mp, p, None))
 
 @app.route('/api/next', methods=['POST'])
 @mpwrap
