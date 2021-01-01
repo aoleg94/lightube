@@ -10,6 +10,15 @@ try:
 	import mpv
 except ImportError:
 	import mpvnew.mpv as mpv
+except OSError:
+	if os.name != 'nt':
+		raise
+	src = os.path.join(scriptpath, "mpv-1.dll")
+	dst = os.path.join("C:", "Windows", "mpv-1.dll")
+	if os.access(dst, os.F_OK):
+		os.remove(dst)
+	os.symlink(src, dst)
+	os.exit(1)
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
