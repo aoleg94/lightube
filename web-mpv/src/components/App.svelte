@@ -79,7 +79,7 @@
 New URL:<input class=w100 type=text bind:value={newurl} maxlen/>
 <br/>
 <ApiButton text="Play Now" uri={"/api/load/"+encodeURIComponent(newurl)}/>
-<ApiButton text=Append uri={"/api/add/"+encodeURIComponent(newurl)}/>
+<ApiButton text=Prepend uri={"/api/add/"+encodeURIComponent(newurl)}/>
 <ApiButton text=Close uri={"/api/reinit"}/>
 <br/>
 <br/>
@@ -88,13 +88,13 @@ Seek: {hms(state.position)} / {hms(state.duration)}
 <br/>
 <br/>
 <ApiButton text="⏮" uri="/api/seek/rel/-60"/>
-<ApiButton text="⏪" uri="/api/seek/rel/-10"/>
+<ApiButton text="⏪" uri="/api/seek/rel/-5"/>
 {#if !state.playing}
 <ApiButton text="▶️" uri="/api/play"/>
 {:else}
 <ApiButton text="⏸" uri="/api/pause"/>
 {/if}
-<ApiButton text="⏩" uri="/api/seek/rel/10"/>
+<ApiButton text="⏩" uri="/api/seek/rel/5"/>
 <ApiButton text="⏭" uri="/api/seek/rel/60"/>
 <br/>
 <br/>
