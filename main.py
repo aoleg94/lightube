@@ -6,6 +6,49 @@ from urllib.request import urlopen
 
 scriptpath = os.path.dirname(os.path.abspath(__file__))
 
+def update(url, fname):
+	def retrcb(got_blocks, block_size, total_bytes):
+		got_bytes = got_blocks * block_size
+		if total_bytes > 0:
+			if got_bytes > total_bytes:
+				got_bytes = total_bytes
+			print(" Downloading %.2f%%... (%d kb / %d kb)" % (got_bytes * 100.0 / total_bytes, got_bytes // 1024, total_bytes // 1024), end='\r')
+		else:
+			print(" Downloading... (%d kb)" % (got_bytes // 1024), end='\r')
+
+	import urllib.request, urllib.error, time
+	req = urllib.request.Request(url)
+	if os.access(fname, os.R_OK):
+		timestamp = os.path.getmtime(fname)
+		timestr = time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime(timestamp))
+		req.add_header("If-Modified-Since", timestr)
+	try:
+		with urllib.request.urlopen(req) as fp:
+			headers = fp.info()
+			print("Downloading '%s' -> '%s'" % (url, fname))
+			with open(fname, 'wb') as tfp:
+				bs = 1024*8
+				size = -1
+				read = 0
+				blocknum = 0
+				if "content-length" in headers:
+					size = int(headers["Content-Length"])
+				retrcb(blocknum, bs, size)
+				while True:
+					block = fp.read(bs)
+					if not block:
+						break
+					read += len(block)
+					tfp.write(block)
+					blocknum += 1
+					retrcb(blocknum, bs, size)
+	except urllib.error.HTTPError as e:
+		if e.code == 304:
+			print("File '%s' is up to date" % fname)
+			return
+		raise
+	print()
+
 try:
 	import mpv
 except ImportError:
@@ -15,6 +58,13 @@ except OSError:
 		raise
 	src = os.path.join(scriptpath, "mpv-1.dll")
 	dst = os.path.join("C:", "Windows", "mpv-1.dll")
+	if not os.access(src, os.F_OK):
+		ver = "-20201220-git-dde0189"
+		ver = ("x86_64" if sys.maxsize > 2**32 else "i686") + ver
+		url = "https://downloads.sourceforge.net/project/mpv-player-windows/libmpv/mpv-dev-" + ver + ".7z"
+		update(url, scriptpath + os.sep + "libmpv.7z")
+		os.system("ytdlwrap/7za x libmpv.7z mpv-1.dll")
+		os.remove(scriptpath + os.sep + "libmpv.7z")
 	if os.access(dst, os.F_OK):
 		os.remove(dst)
 	os.symlink(src, dst)
@@ -410,49 +460,6 @@ def mpstatus2(mp):
 @app.route('/')
 def index():
 	return redirect('/static/indexmpv.html')
-
-def update(url, fname):
-	def retrcb(got_blocks, block_size, total_bytes):
-		got_bytes = got_blocks * block_size
-		if total_bytes > 0:
-			if got_bytes > total_bytes:
-				got_bytes = total_bytes
-			print(" Downloading %.2f%%... (%d kb / %d kb)" % (got_bytes * 100.0 / total_bytes, got_bytes // 1024, total_bytes // 1024), end='\r')
-		else:
-			print(" Downloading... (%d kb)" % (got_bytes // 1024), end='\r')
-
-	import urllib.request, urllib.error, time
-	req = urllib.request.Request(url)
-	if os.access(fname, os.R_OK):
-		timestamp = os.path.getmtime(fname)
-		timestr = time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime(timestamp))
-		req.add_header("If-Modified-Since", timestr)
-	try:
-		with urllib.request.urlopen(req) as fp:
-			headers = fp.info()
-			print("Downloading '%s' -> '%s'" % (url, fname))
-			with open(fname, 'wb') as tfp:
-				bs = 1024*8
-				size = -1
-				read = 0
-				blocknum = 0
-				if "content-length" in headers:
-					size = int(headers["Content-Length"])
-				retrcb(blocknum, bs, size)
-				while True:
-					block = fp.read(bs)
-					if not block:
-						break
-					read += len(block)
-					tfp.write(block)
-					blocknum += 1
-					retrcb(blocknum, bs, size)
-	except urllib.error.HTTPError as e:
-		if e.code == 304:
-			print("File '%s' is up to date" % fname)
-			return
-		raise
-	print()
 
 try:
 	update('http://yt-dl.org/downloads/latest/youtube-dl', 'youtube_dl.zip')
