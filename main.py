@@ -200,6 +200,17 @@ def add(mp, url):
 	ytdl_prefetch(url)
 	return ''
 
+def shutdown_server():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+
+@app.route('/api/quit', methods=['POST'])
+def closeapp():
+	shutdown_server()
+	return ''
+
 @app.route('/api/maxres/<v>', methods=['POST'])
 @mpwrap
 def maxres(mp, v):
