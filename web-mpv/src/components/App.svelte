@@ -142,7 +142,7 @@ Volume: {state.volume}%
 	<TabPanel>
 		<table>
 		{#each state.movies as m}
-			<tr><td><ApiButton small={true} text="+" uri={"/api/add/file://"+encodeURIComponent(m.full)}/><span>&nbsp;{m.name}</span></td></tr>
+			<tr><td><ApiButton small={true} text="+" uri={"/api/load/file://"+encodeURIComponent(m.full)}/><span>&nbsp;{m.name}</span></td></tr>
 		{/each}
 		</table>
 		<ApiButton text="Scan movies" uri="/api/scan"/>
