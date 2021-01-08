@@ -63,7 +63,7 @@ except OSError:
 		ver = ("x86_64" if sys.maxsize > 2**32 else "i686") + ver
 		url = "https://downloads.sourceforge.net/project/mpv-player-windows/libmpv/mpv-dev-" + ver + ".7z"
 		update(url, scriptpath + os.sep + "libmpv.7z")
-		os.system("ytdlwrap/7za x libmpv.7z mpv-1.dll")
+		os.system("ytdlwrap\\7za x libmpv.7z mpv-1.dll")
 		os.remove(scriptpath + os.sep + "libmpv.7z")
 	if os.access(dst, os.F_OK):
 		os.remove(dst)
