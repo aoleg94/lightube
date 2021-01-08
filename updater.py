@@ -18,8 +18,11 @@ BLACKLIST = ".* *.orig mpvnew/ web-mpv/* requirements.txt".split(" ")
 OLD_COMMIT = None
 NEW_COMMIT = None
 
-with open(os.path.join(scriptpath, "gitversion.txt"), "w+t") as f:
-	OLD_COMMIT = f.readline().strip()
+try:
+	with open(os.path.join(scriptpath, "gitversion.txt"), "rt") as f:
+		OLD_COMMIT = f.readline().strip()
+except OSError:
+	pass
 
 def is_outdated():
 	global OLD_COMMIT
