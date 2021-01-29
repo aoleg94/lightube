@@ -157,7 +157,7 @@ def closeapp():
 	return ''
 
 @app.route('/api/update', methods=['POST'])
-def closeapp():
+def updateapp():
 	from updater import is_outdated
 	rc = int(is_outdated())
 	if rc:
