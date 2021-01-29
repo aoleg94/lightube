@@ -5,26 +5,15 @@ from flask import Flask, render_template, url_for, request, redirect, send_file
 from urllib.request import urlopen
 
 scriptpath = os.path.dirname(os.path.abspath(__file__))
+if os.name == 'nt':
+	os.environ["PATH"] = scriptpath + os.pathsep + os.environ["PATH"] # for mpv-1.dll
+	from updater import update_mpv_dll
+	update_mpv_dll("20201220-git-dde0189")
 
 try:
 	import mpv
 except ImportError:
 	import mpvnew.mpv as mpv
-except OSError:
-	if os.name != 'nt':
-		raise
-	src = os.path.join(scriptpath, "mpv-1.dll")
-	dst = os.path.join("C:", "Windows", "mpv-1.dll")
-	if not os.access(src, os.F_OK):
-		ver = "-20201220-git-dde0189"
-		ver = ("x86_64" if sys.maxsize > 2**32 else "i686") + ver
-		url = "https://downloads.sourceforge.net/project/mpv-player-windows/libmpv/mpv-dev-" + ver + ".7z"
-		os.system("ytdlwrap\\7za x libmpv.7z mpv-1.dll")
-		os.remove(scriptpath + os.sep + "libmpv.7z")
-	if os.access(dst, os.F_OK):
-		os.remove(dst)
-	os.symlink(src, dst)
-	os.exit(1)
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
