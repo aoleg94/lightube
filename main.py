@@ -426,7 +426,6 @@ def index():
 	return redirect('/static/indexmpv.html')
 
 try:
-	update('http://yt-dl.org/downloads/latest/youtube-dl', 'youtube_dl.zip')
 	sys.path.append('youtube_dl.zip')
 	import youtube_dl, time, json
 	print('Youtube-DL library on')
