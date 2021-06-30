@@ -116,9 +116,16 @@ def update_lightube():
 def update_ytdl_zip():
 	update('http://yt-dl.org/downloads/latest/youtube-dl', 'youtube_dl.zip')
 
-def update_mpv_dll(ver="20201220-git-dde0189"):
+def update_mpv_dll(ver=None):
 	if os.name != 'nt': return
+	current = None
+	try:
+		with open(os.path.join(scriptpath, "mpvversion.txt"), "rt") as f:
+			current = f.readline().strip()
+	except OSError:
+		pass
 	if not os.access("mpv-1.dll", os.F_OK):
+		if ver is None: ver="20201220-git-dde0189"
 		ver = ("x86_64-" if sys.maxsize > 2**32 else "i686-") + ver
 		url = "https://downloads.sourceforge.net/project/mpv-player-windows/libmpv/mpv-dev-" + ver + ".7z"
 		update(url, scriptpath + os.sep + "libmpv.7z")
