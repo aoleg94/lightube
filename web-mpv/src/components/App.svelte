@@ -149,7 +149,7 @@ Volume: {state.volume}%
 	</TabPanel>
 
 	<TabPanel>
-		<ApiButton text="🔄" uri="/api/retry" small={true}/>
+		<ApiButton text="🔄" uri="/api/retry" small={true}/> Cache: {state.cache|0} s
 		<br/>
 		Current max quality: {state.quality == MAX_QUALITY ? "Max" : state.quality+"p"}
 		<ul>

@@ -345,7 +345,8 @@ def mpstatus(mp):
 		'playlist_pos': mp.playlist_pos,
 		'speed': mp.speed,
 		'downloads': dl_status(),
-		'quality': MAXRES
+		'quality': MAXRES,
+		'cache': mp.demuxer_cache_duration
 	}
 
 def dl_status():
@@ -420,23 +421,26 @@ def mpstatus2(mp):
 	d = mp.duration
 	if mp.playlist_pos is not None and mp.playlist_pos+1 < len(PLAYLIST) and p is not None and d is not None and d-p < 120:
 		ytdl_prefetch(PLAYLIST[mp.playlist_pos+1]) # fetch in background
-	return {
-		'position': mp.time_pos,
-		'duration': mp.duration,
-		'volume': mp.volume,
+	ret = mpstatus()
+	ret.update({
+		#'position': mp.time_pos,
+		#'duration': mp.duration,
+		#'volume': mp.volume,
 		'title': mp.media_title,
-		'mute': mp.mute,
-		'playing': not mp.pause,
-		'playlist_pos': mp.playlist_pos,
+		#'mute': mp.mute,
+		#'playing': not mp.pause,
+		#'playlist_pos': mp.playlist_pos,
 		'video': mp.path,
 		'playlist': pl,
 		'audio_tracks': [x for x in mp.track_list if x.get('type') == 'audio'],
 		'sub_tracks': [x for x in mp.track_list if x.get('type') == 'sub'],
 		'movies': [{'name': os.path.basename(x), 'full': os.path.abspath(x)} for x in MOVIES],
-		'speed': mp.speed,
-		'downloads': dl_status(),
-		'quality': MAXRES
-	}
+		#'speed': mp.speed,
+		#'downloads': dl_status(),
+		#'quality': MAXRES,
+		#'cache': mp.demuxer_cache_duration
+	})
+	return ret
 
 @app.route('/')
 def index():
