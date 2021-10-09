@@ -114,7 +114,7 @@ def update_lightube():
 			os.exit(0)
 
 def update_ytdl_zip():
-	update('http://yt-dl.org/downloads/latest/youtube-dl', 'youtube_dl.zip')
+	update('http://yt-dl.org/downloads/latest/youtube-dl', 'youtube_dl_win.zip')
 
 def update_mpv_dll(ver=None):
 	if os.name != 'nt': return

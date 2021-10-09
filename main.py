@@ -426,8 +426,12 @@ def index():
 	return redirect('/static/indexmpv.html')
 
 try:
-	sys.path.append('youtube_dl.zip')
-	import youtube_dl, time, json
+	import time, json
+	try:
+		import youtube_dl
+	except ImportError:
+		sys.path.append('youtube_dl_win.zip')
+		import youtube_dl
 	print('Youtube-DL library on')
 	_YTDL_OBJ = youtube_dl.YoutubeDL(dict(simulate=True, no_warnings=True, extract_flat='in_playlist',
 		sub_format='ass/srt/best', subtitleslangs='en,ru,eng,rus'.split(','), writesubtitles=True, writeautomaticsub=True,
