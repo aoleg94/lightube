@@ -182,6 +182,12 @@ def sponsorblock(mp):
 	mp.script_message('sponsorblock')
 	return ''
 
+@app.route('/api/subpos', methods=['POST'])
+@mpwrap
+def subpos(mp):
+	mp.sub_pos = 0 if mp.sub_pos == 100 else 100
+	return ''
+
 @app.route('/api/pause', methods=['POST'])
 @mpwrap
 def pause(mp):
