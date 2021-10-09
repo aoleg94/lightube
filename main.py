@@ -135,6 +135,17 @@ def load(mp, url):
 	ytdl_prefetch(url)
 	return ''
 
+@app.route('/api/retry', methods=['POST'])
+@mpwrap
+def retry(mp):
+	oldpos = mp.time_pos
+	oldplp = mp.playlist_pos
+	mp.stop(True)
+	with mp.prepare_and_wait_for_event('file-loaded'):
+		mp.playlist_play_index(oldplp)
+	mp.seek(oldpos, 'absolute')
+	return ''
+
 @app.route('/api/add/<path:url>', methods=['POST'])
 @mpwrap
 def add(mp, url):
@@ -163,12 +174,6 @@ def updateapp():
 	if rc:
 		shutdown_server()
 	return str(rc)
-
-@app.route('/api/maxres/<v>', methods=['POST'])
-@mpwrap
-def maxres(mp, v):
-	mp['ytdl-format'] = ytdlfmt(int(v))
-	return ''
 
 @app.route('/api/play', methods=['POST'])
 @mpwrap
@@ -437,6 +442,9 @@ def mpstatus2(mp):
 def index():
 	return redirect('/static/indexmpv.html')
 
+def ytdl_drop():
+	return ''
+
 try:
 	import time, json
 	try:
@@ -489,6 +497,10 @@ try:
 				_YTDL_QUEUE.put(url)
 				return '', 201
 			return data, 200 if ok else 500
+	@app.route('/api/ytdl-cache-drop', methods=['POST'])
+	def ytdl_drop():
+		_YTDL_CACHE.clear()
+		return ''
 	import re
 	_YTDL_ID_RE = re.compile(
 	r'https?://youtu\.be/([-_\w]+).*|' +
@@ -512,6 +524,13 @@ else:
 	os.environ["PATH"] = scriptpath + os.sep + 'ytdlwrap' + os.pathsep + os.environ["PATH"]
 	if os.name == 'posix':
 		os.chmod(os.path.join(scriptpath, 'ytdlwrap', 'youtube-dl'), 0o755)
+
+@app.route('/api/maxres/<v>', methods=['POST'])
+@mpwrap
+def maxres(mp, v):
+	mp['ytdl-format'] = ytdlfmt(int(v))
+	ytdl_drop()
+	return ''
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')
