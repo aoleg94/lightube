@@ -107,8 +107,8 @@ Volume: {state.volume}%
 <ApiButton text="🔉" uri="/api/vol/rel/-5"/>
 <ApiButton text="🔊" uri="/api/vol/rel/5"/>
 <br/>
-<ApiButton text="👂" uri="/api/cycle/audio"/>
 <ApiButton text="🔡" uri="/api/cycle/sub"/>
+<ApiButton text="🤑" uri="/api/sponsorblock"/>
 <ApiButton text="🎚" uri="/api/cyclev/af/loudnorm=I=-30 loudnorm=I=-15 anull"/>
 <br/>
 <!--ApiButton text="⏮" uri="/api/prev"/-->

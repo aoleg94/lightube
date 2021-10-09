@@ -14,10 +14,9 @@
 	"author": "",
 	"license": "ISC",
 	"devDependencies": {
-		"parcel-bundler": "^1.12.4",
-		"parcel-plugin-svelte": "^4.0.8",
+		"parcel-bundler": "^1.12.5",
+		"parcel-plugin-svelte": "^4.0.9",
 		"sass": "^1.25.0",
-		"svelte": "^3.31.0"
-	},
-	"dependencies": {}
+		"svelte": "^3.43.1"
+	}
 }
