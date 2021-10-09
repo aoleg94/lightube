@@ -176,6 +176,12 @@ def play(mp):
 	mp.pause = False
 	return ''
 
+@app.route('/api/sponsorblock', methods=['POST'])
+@mpwrap
+def sponsorblock(mp):
+	mp.script_message('sponsorblock')
+	return ''
+
 @app.route('/api/pause', methods=['POST'])
 @mpwrap
 def pause(mp):
