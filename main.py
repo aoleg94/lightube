@@ -78,7 +78,7 @@ def mp():
 	global PLAYLIST
 	global MAXRES
 	if _mp is None:
-		d = dict(log_handler=print, config_dir=os.path.dirname(__file__),
+		d = dict(log_handler=print, config_dir=os.path.dirname(__file__), audio_display='attachment',
 			input_default_bindings=True, input_vo_keyboard=True, osc=True, config=True, load_scripts=False,
 			keep_open=True, fullscreen=True, idle=True, hwdec="auto", #msg_level="all=v",
 			script_opts="ytdl_hook-try_ytdl_first=yes", #loglevel='debug',
@@ -433,7 +433,7 @@ try:
 		sys.path.append('youtube_dl_win.zip')
 		import youtube_dl
 	print('Youtube-DL library on')
-	_YTDL_OBJ = youtube_dl.YoutubeDL(dict(simulate=True, no_warnings=True, extract_flat='in_playlist',
+	_YTDL_OBJ = youtube_dl.YoutubeDL(dict(simulate=True, no_warnings=True, extract_flat='in_playlist', netrc=True,
 		sub_format='ass/srt/best', subtitleslangs='en,ru,eng,rus'.split(','), writesubtitles=True, writeautomaticsub=True,
 		noplaylist=True, quiet=True, format=ytdlfmt(MAXRES)))
 	_YTDL_CACHE = {}
