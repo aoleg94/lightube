@@ -114,7 +114,10 @@ def update_lightube():
 			os.exit(0)
 
 def update_ytdl_zip():
-	update('http://yt-dl.org/downloads/latest/youtube-dl', 'youtube_dl_win.zip')
+	if True:
+		update('https://github.com/yt-dlp/yt-dlp/releases/download/latest/yt-dlp.zip', 'youtube_dlp_win.zip')
+	else:
+		update('http://yt-dl.org/downloads/latest/youtube-dl', 'youtube_dl_win.zip')
 
 def update_mpv_dll(ver=None):
 	if os.name != 'nt': return

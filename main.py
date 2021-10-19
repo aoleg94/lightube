@@ -451,11 +451,18 @@ def ytdl_drop():
 
 try:
 	import time, json
-	try:
-		import youtube_dl
-	except ImportError:
-		sys.path.append('youtube_dl_win.zip')
-		import youtube_dl
+	if True:
+		try:
+			import yt_dlp as youtube_dl
+		except ImportError:
+			sys.path.append('youtube_dlp_win.zip')
+			import yt_dlp as youtube_dl
+	else:
+		try:
+			import youtube_dl
+		except ImportError:
+			sys.path.append('youtube_dl_win.zip')
+			import youtube_dl
 	print('Youtube-DL library on')
 	_YTDL_OBJ = youtube_dl.YoutubeDL(dict(simulate=True, no_warnings=True, extract_flat='in_playlist', netrc=True,
 		sub_format='ass/srt/best', subtitleslangs='en,ru,eng,rus'.split(','), writesubtitles=True, writeautomaticsub=True,
@@ -476,6 +483,8 @@ try:
 				else:
 					_YTDL_OBJ.params['format'] = ytdlfmt(MAXRES)
 					res = _YTDL_OBJ.extract_info(k)
+					if 'thumbnails' in res and not isinstance(res.get('thumbnails'), list):
+						res['thumbnails'] = list(res['thumbnails'])
 					_YTDL_CACHE[k] = (type(res) != str, res, time.time())
 			except Exception:
 				import traceback
