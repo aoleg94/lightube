@@ -78,7 +78,7 @@ def mp():
 	global PLAYLIST
 	global MAXRES
 	if _mp is None:
-		d = dict(log_handler=print, config_dir=os.path.dirname(__file__), audio_display='attachment',
+		d = dict(log_handler=print, config_dir=os.path.dirname(__file__), #audio_display='attachment',
 			input_default_bindings=True, input_vo_keyboard=True, osc=True, config=True, load_scripts=False,
 			keep_open=True, fullscreen=True, idle=True, hwdec="auto", #msg_level="all=v",
 			script_opts="ytdl_hook-try_ytdl_first=yes", #loglevel='debug',
