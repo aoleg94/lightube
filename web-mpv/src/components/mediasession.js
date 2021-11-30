@@ -1,12 +1,17 @@
 import { need_update } from './stores.js';
 
+const disable = true;
+
 function act(uri) {
 	fetch(uri, {method: 'POST'});
 	need_update.set(true);
 }
 
+
 var audioTag = null;
 export function setupNotification(pause) {
+	if(disable)
+		return;
 	if (!audioTag && 'mediaSession' in navigator) {
 		audioTag = document.createElement('audio');
 		document.body.appendChild(audioTag);
@@ -21,6 +26,8 @@ export function setupNotification(pause) {
 }
 
 export function updateMetadata(state) {
+	if(disable)
+		return;
 	if('mediaSession' in navigator) {
 		navigator.mediaSession.metadata = state.title ? new MediaMetadata({title: state.title}) : null;
 		navigator.mediaSession.playbackState = !state.duration ? 'none' : (state.playing ? 'playing' : 'paused')
@@ -37,7 +44,7 @@ export function updateMetadata(state) {
 
 /* Previous Track & Next Track */
 
-if('mediaSession' in navigator) {
+if(!disable && 'mediaSession' in navigator) {
 	navigator.mediaSession.setActionHandler('previoustrack', function() {
 		act('/api/prev');
 	});
